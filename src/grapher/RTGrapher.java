@@ -140,7 +140,7 @@ public class RTGrapher extends ApplicationFrame{
 //            intervalTextField.addActionListener(new ActionListener(){
 //            	@Override
 //            	public void actionPerformed(ActionEvent e){
-//            		if(isInteger(intervalTextField.getText())){
+//            		if(isInteger(intervalTextField.getText()))
 //            			btManager.baudRate=Integer.parseInt(intervalTextField.getText());
 //            		}
 //            	}
@@ -152,7 +152,7 @@ public class RTGrapher extends ApplicationFrame{
             JPanel btnPanel = new JPanel(new FlowLayout());
             btnPanel.add(run);
             btnPanel.add(addValue);
-            btnPanel.add(new JLabel("Baud Rate:"));
+//          btnPanel.add(new JLabel("Baud Rate:"));
 //          btnPanel.add(intervalTextField);
             this.add(btnPanel, BorderLayout.SOUTH);
             timer = new Timer(100, new ActionListener(){
