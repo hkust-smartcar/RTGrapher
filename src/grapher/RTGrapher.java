@@ -136,7 +136,7 @@ public class RTGrapher extends ApplicationFrame{
 //                    }
 //                }
 //            });
-            final JTextField intervalTextField=new JTextField("115200");
+//            final JTextField intervalTextField=new JTextField("115200");
 //            intervalTextField.addActionListener(new ActionListener(){
 //            	@Override
 //            	public void actionPerformed(ActionEvent e){
