@@ -56,10 +56,8 @@ public class RTGrapher extends ApplicationFrame{
     private static final Random random = new Random();
     private final int seriesCount;
     private Timer timer;
-    public BTManager btManager;
     public RTGrapher(){
     	super("Untitled");
-    	btManager=new BTManager(this);
     	noticeLabel=new JLabel();
     	if(IS_DEBUG){
     		TITLE=new String("Ha");
@@ -139,14 +137,14 @@ public class RTGrapher extends ApplicationFrame{
 //                }
 //            });
             final JTextField intervalTextField=new JTextField("115200");
-            intervalTextField.addActionListener(new ActionListener(){
-            	@Override
-            	public void actionPerformed(ActionEvent e){
-            		if(isInteger(intervalTextField.getText())){
-            			btManager.baudRate=Integer.parseInt(intervalTextField.getText());
-            		}
-            	}
-            });
+//            intervalTextField.addActionListener(new ActionListener(){
+//            	@Override
+//            	public void actionPerformed(ActionEvent e){
+//            		if(isInteger(intervalTextField.getText())){
+//            			btManager.baudRate=Integer.parseInt(intervalTextField.getText());
+//            		}
+//            	}
+//            });
             //JList<CommPortIdentifier> btList=new JList<CommPortIdentifier>(BTManager.getPortIdentifiers());
             //this.add(btList,BorderLayout.EAST);
             this.add(new ChartPanel(chart), BorderLayout.CENTER);
@@ -155,7 +153,7 @@ public class RTGrapher extends ApplicationFrame{
             btnPanel.add(run);
             btnPanel.add(addValue);
             btnPanel.add(new JLabel("Baud Rate:"));
-            btnPanel.add(intervalTextField);
+//          btnPanel.add(intervalTextField);
             this.add(btnPanel, BorderLayout.SOUTH);
             timer = new Timer(100, new ActionListener(){
             	@Override
