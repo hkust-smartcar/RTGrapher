@@ -13,11 +13,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
+
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.Timer;
 
 import org.jfree.chart.ChartFactory;
@@ -44,59 +44,48 @@ public class RTGrapher extends ApplicationFrame{
     private static final String STOP = "Stop";
     private static final float MINMAX = 100;
     private static final int COUNT = 60;
-    private File file;
-    private FileInputStream fis;
-    private FileOutputStream fos;
-    private final String PATH;
     private final DynamicTimeSeriesCollection dataset;
-    private byte[] b;
     public JLabel noticeLabel;
-//    private static final int FAST = 100;
-//    private static final int SLOW = FAST * 5;
+    private final boolean isBTModuleEnabled;
+    public BTModule bt;
     private static final Random random = new Random();
     private final int seriesCount;
     private Timer timer;
-    public RTGrapher(){
+    public RTGrapher(boolean enableBTModule){
     	super("Untitled");
+    	isBTModuleEnabled=enableBTModule;
     	noticeLabel=new JLabel();
     	if(IS_DEBUG){
     		TITLE=new String("Ha");
-    		PATH=new String("/dev/tty.SC04-DevB");
-    		seriesCount=4;
+    		seriesCount=3;
+    		if(isBTModuleEnabled){
+        		String PATH=new String("/dev/tty.SC04-DevB");
+    			bt=new BTModule(PATH);
+    		}
     	}else{
     		TITLE=JOptionPane.showInputDialog(this,"Graph name:","HA");
-    		PATH=JOptionPane.showInputDialog(this,"Path name:",null);
+        	String s;
+    		do{
+        		s=JOptionPane.showInputDialog(this, "Number of graph:",2);
+        	}while(!isInteger(s));
+    		seriesCount=Integer.parseInt(s);
+    		if(isBTModuleEnabled){
+    			String PATH=JOptionPane.showInputDialog(this,"Path name:",null);
+    			bt=new BTModule(PATH);
+    			bt.setBufferSize(4);
+    		}
     	}
-    	
-    	
-    	String s;
-    	
-//    	do{
-//    		s=JOptionPane.showInputDialog(this, "Number of graph:",2);
-//    	}while(!isInteger(s));
-    	file=new File(PATH);
-    	try {
-			fis = new FileInputStream(file);
-			fos = new FileOutputStream(file);
-//			System.out.println("Total file size to read (in bytes) : "
-//					+ fis.available());
- 
-//			int content;
-//			while ((content = fis.read()) != -1) {
-//				// convert to char and display it
-//				addData((float)content,1);
-//			}
- 
-		} catch (IOException e) {
-			e.printStackTrace();
-		} 
     	dataset =
                 new DynamicTimeSeriesCollection(seriesCount, COUNT, new Second());
-    	//this.seriesCount=Integer.parseInt(s);
             dataset.setTimeBase(new Second());
             float[] f=new float[]{0};
-            dataset.addSeries(f, 0, "Fake data");
-            dataset.addSeries(f, 1, "Custom Data");
+            for(int i=0;i<seriesCount;i++){
+            	String id="data";
+            	id+=Integer.toString(i+1);
+            	dataset.addSeries(f,i,id);
+            }
+//            dataset.addSeries(f, 0, "Fake data");
+//            dataset.addSeries(f, 1, "Custom Data");
             JFreeChart chart = createChart(dataset);
             final JButton run = new JButton(STOP);
             run.addActionListener(new ActionListener() {
@@ -123,30 +112,6 @@ public class RTGrapher extends ApplicationFrame{
                         dataset.addValue(1,dataset.getNewestIndex(),newData);
             	}
             });
-//            final JComboBox combo = new JComboBox();
-//            combo.addItem("Fast");
-//            combo.addItem("Slow");
-//            combo.addActionListener(new ActionListener() {
-//                @Override
-//                public void actionPerformed(ActionEvent e) {
-//                    if ("Fast".equals(combo.getSelectedItem())) {
-//                        timer.setDelay(FAST);
-//                    } else {
-//                        timer.setDelay(SLOW);
-//                    }
-//                }
-//            });
-//            final JTextField intervalTextField=new JTextField("115200");
-//            intervalTextField.addActionListener(new ActionListener(){
-//            	@Override
-//            	public void actionPerformed(ActionEvent e){
-//            		if(isInteger(intervalTextField.getText()))
-//            			btManager.baudRate=Integer.parseInt(intervalTextField.getText());
-//            		}
-//            	}
-//            });
-            //JList<CommPortIdentifier> btList=new JList<CommPortIdentifier>(BTManager.getPortIdentifiers());
-            //this.add(btList,BorderLayout.EAST);
             this.add(new ChartPanel(chart), BorderLayout.CENTER);
             this.add(noticeLabel, BorderLayout.NORTH);
             JPanel btnPanel = new JPanel(new FlowLayout());
@@ -164,6 +129,8 @@ public class RTGrapher extends ApplicationFrame{
             		//dataset.appendData(newData,dataset.getNewestIndex(),1);
             	}
             });
+            Thread thread=new Thread(bt);
+            thread.start();
             //btManager.startProcess();
             
         }
@@ -172,13 +139,6 @@ public class RTGrapher extends ApplicationFrame{
     }
     public void writeNotice(String message){
     	noticeLabel.setText(message);
-    }
-    private float[] gaussianData() {
-        float[] a = new float[COUNT];
-        for (int i = 0; i < a.length; i++) {
-            a[i] = randomValue();
-        }
-        return a;
     }
 
     private JFreeChart createChart(final XYDataset dataset) {
@@ -211,45 +171,12 @@ public class RTGrapher extends ApplicationFrame{
             @Override
             public void run() {
                 
-            	RTGrapher demo = new RTGrapher();
+            	RTGrapher demo = new RTGrapher(true);
                 
                 demo.pack();
                 RefineryUtilities.centerFrameOnScreen(demo);
                 demo.setVisible(true);
-                demo.start();     
-                Thread thread=new Thread(new Runnable(){
-                	@Override
-                	public void run(){
-                	byte[] b=new byte[4];
-                    try{
-        			while (true) {
-        				// convert to char and display it
-        				//System.out.println(demo.fis.read(b));
-        				for(int j=0;j<demo.seriesCount;j++){
-        				for(int i=0;i<4;i++){
-        					demo.fis.read(b,i,1);
-        				}
-        					demo.addData(ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN).getFloat(),j);
-        				}
-//        				byte[] bytes = ByteBuffer.allocate(2).putShort((short) 1)
-//        						.order(ByteOrder.BIG_ENDIAN).array();
-//                		demo.fos.write(bytes,0,bytes.length);
-        			}
-            		
-                    }catch(IOException e){
-                    	e.printStackTrace();
-                    }
-                    	finally {
-                    		try {
-                    			if (demo.fis != null)
-                    				demo.fis.close();
-                    		} catch (IOException ex) {
-                    			ex.printStackTrace();
-                    		}
-                    	}
-                	}
-                });
-                thread.start();
+                demo.start();
             }
         });
     }
@@ -265,4 +192,53 @@ public class RTGrapher extends ApplicationFrame{
     public int getSeriesCount(){
     	return seriesCount;
     }
-}
+    
+    public class BTModule implements Runnable{
+    	private FileInputStream fis;
+    	private FileOutputStream fos;
+    	private int bufferSize;
+    	private final String PATH;
+    	BTModule(String PATH){
+    		this.PATH=PATH;
+    		try{
+    			File file=new File(PATH);
+    			this.fis=new FileInputStream(file);
+    			this.fos=new FileOutputStream(file);
+    		}catch(IOException e){
+    			e.printStackTrace();
+    		}
+    	}
+    	public void setBufferSize(int size){
+    		if(size>=0)
+    		bufferSize=size;
+    	}
+    	@Override
+    	public void run() {
+    		while (true) {
+    			byte[] b=new byte[4];
+                try{
+    			while (true) {
+    				for(int j=0;j<seriesCount;j++){
+    				for(int i=0;i<bufferSize;i++){
+    					fis.read(b,i,1);
+    				}
+    					RTGrapher.this.addData(ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN).getFloat(),j);
+    				}
+    			}
+        		
+                }catch(IOException e){
+                	e.printStackTrace();
+                }
+                	finally {
+                		try {
+                			if (fis != null)
+                				fis.close();
+                		} catch (IOException ex) {
+                			ex.printStackTrace();
+                		}
+                	}
+            	}
+            };
+    	}
+    	
+    }
