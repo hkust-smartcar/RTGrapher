@@ -60,7 +60,7 @@ public class RTGrapher extends ApplicationFrame{
     		seriesCount=3;
     		if(isBTModuleEnabled){
         		String PATH=new String("/dev/tty.SC04-DevB");
-    			bt=new BTModule(PATH);
+    			bt=new BTModule(PATH,4);
     		}
     	}else{
     		TITLE=JOptionPane.showInputDialog(this,"Graph name:","HA");
@@ -71,7 +71,7 @@ public class RTGrapher extends ApplicationFrame{
     		seriesCount=Integer.parseInt(s);
     		if(isBTModuleEnabled){
     			String PATH=JOptionPane.showInputDialog(this,"Path name:",null);
-    			bt=new BTModule(PATH);
+    			bt=new BTModule(PATH,4);
     			bt.setBufferSize(4);
     		}
     	}
@@ -198,8 +198,9 @@ public class RTGrapher extends ApplicationFrame{
     	private FileOutputStream fos;
     	private int bufferSize;
     	private final String PATH;
-    	BTModule(String PATH){
+    	BTModule(String PATH,int bufferSize){
     		this.PATH=PATH;
+    		this.bufferSize=bufferSize;
     		try{
     			File file=new File(PATH);
     			this.fis=new FileInputStream(file);
