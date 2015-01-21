@@ -12,12 +12,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Map;
 import java.util.Random;
+import java.util.Vector;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.Timer;
 
 import org.jfree.chart.ChartFactory;
@@ -44,10 +47,12 @@ public class RTGrapher extends ApplicationFrame{
     private static final String STOP = "Stop";
     private static final float MINMAX = 100;
     private static final int COUNT = 60;
+    private static int DELAY_MS;
     private final DynamicTimeSeriesCollection dataset;
     public JLabel noticeLabel;
     private final boolean isBTModuleEnabled;
     public BTModule bt;
+    public Map dataSet;
     private static final Random random = new Random();
     private final int seriesCount;
     private Timer timer;
@@ -102,23 +107,22 @@ public class RTGrapher extends ApplicationFrame{
                     }
                 }
             });
-            final JButton addValue=new JButton("Add value");
-            addValue.addActionListener(new ActionListener(){
-            	@Override
-            	public void actionPerformed(ActionEvent e){
-            		
-                        float newData = randomValue();
-                        //dataset.advanceTime();
-                        dataset.addValue(1,dataset.getNewestIndex(),newData);
-            	}
-            });
+//            final JButton addValue=new JButton("Add value");
+//            addValue.addActionListener(new ActionListener(){
+//            	@Override
+//            	public void actionPerformed(ActionEvent e){
+//            		
+//                        float newData = randomValue();
+//                        //dataset.advanceTime();
+//                        dataset.addValue(1,dataset.getNewestIndex(),newData);
+//            	}
+//            });
             this.add(new ChartPanel(chart), BorderLayout.CENTER);
             this.add(noticeLabel, BorderLayout.NORTH);
             JPanel btnPanel = new JPanel(new FlowLayout());
             btnPanel.add(run);
-            btnPanel.add(addValue);
-//          btnPanel.add(new JLabel("Baud Rate:"));
-//          btnPanel.add(intervalTextField);
+//            btnPanel.add(addValue);
+            JTextField delayTextField=new JTextField("40");
             this.add(btnPanel, BorderLayout.SOUTH);
             timer = new Timer(100, new ActionListener(){
             	@Override
@@ -129,10 +133,18 @@ public class RTGrapher extends ApplicationFrame{
             		//dataset.appendData(newData,dataset.getNewestIndex(),1);
             	}
             });
+            btnPanel.add(new JLabel("Delay(ms):"));
+            delayTextField.addActionListener(new ActionListener(){
+            	@Override
+            	public void actionPerformed(ActionEvent e){
+            		if(isInteger(delayTextField.getText())){
+            			timer.setDelay(Integer.parseInt(delayTextField.getText()));
+            		}
+            	}
+            });
+            btnPanel.add(delayTextField,BorderLayout.SOUTH);
             Thread thread=new Thread(bt);
             thread.start();
-            //btManager.startProcess();
-            
         }
     private float randomValue() {
         return (float) (random.nextGaussian() * MINMAX / 10000);
