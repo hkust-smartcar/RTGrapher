@@ -72,6 +72,7 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
     private int interval;
     private final boolean isBTModuleEnabled;
     public BTModule bt;
+    public FileModule fm;
     public HashMap<DataEntry,Integer> dataSet;
     private final int seriesCount;
     private Timer timer;
@@ -102,6 +103,9 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
     		if(isBTModuleEnabled){
         		String PATH=new String("/dev/tty.SC04-DevB");
     			bt=new BTModule(PATH,4);
+    		}else{
+    			String PATH=new String("/dev/tty.SC04-DevB");
+    			fm=new FileModule(PATH,4);
     		}
     	}else{
     		TITLE=JOptionPane.showInputDialog(this,"Graph name:","HA");
@@ -115,6 +119,10 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
     			String PATH=JOptionPane.showInputDialog(this,"Path name:","/dev/tty.SC04-DevB");
     			bt=new BTModule(PATH,4);
     			bt.setBufferSize(4);
+    		}else{
+    			String PATH=JOptionPane.showInputDialog(this,"Path name:","/dev/tty.SC04-DevB");
+    			fm=new FileModule(PATH,4);
+    			fm.setBufferSize(4);
     		}
     	}
     	dataset =
@@ -271,11 +279,55 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
     /*
      * nested class definition
      */
+    public class FileModule implements Runnable{
+    	private FileInputStream fis;
+    	private FileOutputStream fos;
+    	private int bufferSize;
+     	private String PATH;
+		FileModule(String PATH,int bufferSize){
+			try{
+				this.bufferSize=bufferSize;
+				this.PATH=PATH;
+				File file=new File(PATH);
+				this.fis=new FileInputStream(file);
+				this.fos=new FileOutputStream(file);
+			}catch(IOException e){
+				e.printStackTrace();
+			}
+		}
+		public void setBufferSize(int size){
+     		if(size>=0)
+     		bufferSize=size;
+     	}
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			byte[] b=new byte[4];
+			try{
+				while(true){
+					for(int j=0;j<seriesCount;j++){
+	     				for(int i=0;i<bufferSize;i++){
+	     					fis.read(b,i,1);
+	     				}
+	     				RTGrapher.this.addData(ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN).getFloat(),j);
+					}
+				}
+			}catch(IOException e){
+				e.printStackTrace();
+			}finally{
+				try{
+					if(fis!=null)
+						fis.close();
+					}catch(IOException e){
+						e.printStackTrace();
+					}
+				}
+			};
+    }
     //TODO the BTModule should now relying on rxtx library instead of java file io
     public class BTModule implements Runnable{
     	private InputStream in;
-//    	private FileInputStream fis;
-//    	private FileOutputStream fos;
+
     	private int bufferSize;
     	private final String PATH;
     	BTModule(String PATH,int bufferSize){
