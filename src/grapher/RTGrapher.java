@@ -60,11 +60,13 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
  */
 	private static final long serialVersionUID = 6580194594526535628L;
 	private static String TITLE;
-	private static final boolean IS_DEBUG=false;
-    private static final String START = "Start";
-    private static final String STOP = "Stop";
-    private static final int BAUD_RATE=115200;
-    private static final int TIME_OUT=2000;
+	private static final boolean IS_DEBUG	=false;
+    private static final String START 		= "Start";
+    private static final String STOP 		= "Stop";
+    private static final int BAUD_RATE		=115200;
+    private static final int TIME_OUT		=2000;
+    private static final float MINMAX 		= 100;
+    private static final int BYTE_BUF 		= 100;
     //COUNT= total number of entries in each series.(can be get by getItemCount(int series)
     private static final int COUNT = 60;
     private final DynamicTimeSeriesCollection dataset;
@@ -80,8 +82,12 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
     private OutputStream output;
     private SerialPort serialPort;
     private static final String PORT_NAMES[] = {
-        "/dev/tty.usbserial-A9007UX1", // Mac OS X
-        "/dev/tty.SC04-DevB",
+        //"/dev/tty.usbserial-A9007UX1", // Mac OS X
+        "/dev/tty.SCTRAVIS-DevB",
+    	"/dev/tty.SC04-DevB",
+        "/dev/tty.HC-07-DevB",
+        "/dev/tty.Bluetooth-Incoming-Port",
+        "/dev/tty.SCTRAVIS-DevB",
         "/dev/ttyUSB0", // Linux
         "COM7", // Windows
 };
@@ -101,28 +107,27 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
     		TITLE=new String("Ha");
     		seriesCount=3;
     		if(isBTModuleEnabled){
-        		String PATH=new String("/dev/tty.SC04-DevB");
-    			bt=new BTModule(PATH,4);
+        		String PATH=new String("/dev/tty.SCTRAVIS-DevB");
+    			bt=new BTModule(PATH,2);
     		}else{
-    			String PATH=new String("/dev/tty.SC04-DevB");
-    			fm=new FileModule(PATH,4);
+    			String PATH=new String("/dev/tty.SCTRAVIS-DevB");
+    			fm=new FileModule(PATH,2);
     		}
     	}else{
-    		TITLE=JOptionPane.showInputDialog(this,"Graph name:","HA");
+    		TITLE=JOptionPane.showInputDialog(this,"Graph name:","Graph");
         	String s;
     		do{
-        		s=JOptionPane.showInputDialog(this, "Number of graph:",3);
+        		s=JOptionPane.showInputDialog(this, "Number of graph:",4);
         	}while(!isInteger(s));
     		seriesCount=Integer.parseInt(s);
     		if(isBTModuleEnabled){
 //    			initializeBT();
-    			String PATH=JOptionPane.showInputDialog(this,"Path name:","/dev/tty.SC04-DevB");
+    			String PATH=JOptionPane.showInputDialog(this,"Path name:","/dev/tty.SCTRAVIS-DevB");
     			bt=new BTModule(PATH,4);
     			bt.setBufferSize(4);
     		}else{
-    			String PATH=JOptionPane.showInputDialog(this,"Path name:","/dev/tty.SC04-DevB");
+    			String PATH=JOptionPane.showInputDialog(this,"Path name:","/dev/tty.SCTRAVIS-DevB");
     			fm=new FileModule(PATH,4);
-    			fm.setBufferSize(4);
     		}
     	}
     	dataset =
@@ -216,8 +221,15 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
             /*
              * BTModule thread initiation
              */
-            Thread thread=new Thread(bt);
-            thread.start();
+            Thread thread;
+            if(isBTModuleEnabled){
+            	thread=new Thread(bt);
+                thread.start();
+            }else{
+            	thread=new Thread(fm);
+            	thread.start();
+            }
+            
         }
 /*
  * Member function declaration
@@ -235,7 +247,7 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
         //TODO investigate auto ranges
         domain.setAutoRange(true);
         ValueAxis range = plot.getRangeAxis();
-        range.setAutoRange(true);
+        range.setRange(-MINMAX, MINMAX);
         return result;
     }
 
@@ -259,7 +271,6 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
             public void run() {
                 
             	RTGrapher demo = new RTGrapher(true);
-                
                 demo.pack();
                 RefineryUtilities.centerFrameOnScreen(demo);
                 demo.setVisible(true);
@@ -281,18 +292,14 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
      */
     public class FileModule implements Runnable{
     	private FileInputStream fis;
-    	private FileOutputStream fos;
     	private int bufferSize;
-     	private String PATH;
-		FileModule(String PATH,int bufferSize){
+     	FileModule(String PATH,int bufferSize){
 			try{
 				this.bufferSize=bufferSize;
-				this.PATH=PATH;
 				File file=new File(PATH);
 				this.fis=new FileInputStream(file);
-				this.fos=new FileOutputStream(file);
 			}catch(IOException e){
-				e.printStackTrace();
+				System.out.println("FileModule: file"+PATH+"not found");
 			}
 		}
 		public void setBufferSize(int size){
@@ -302,14 +309,15 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
 		@Override
 		public void run() {
 			// TODO Auto-generated method stub
-			byte[] b=new byte[4];
+			byte[] b=new byte[BYTE_BUF];
 			try{
 				while(true){
 					for(int j=0;j<seriesCount;j++){
 	     				for(int i=0;i<bufferSize;i++){
-	     					fis.read(b,i,1);
+	     					fis.read(b,i,BYTE_BUF);
 	     				}
 	     				RTGrapher.this.addData(ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN).getFloat(),j);
+	     				dataset.advanceTime();
 					}
 				}
 			}catch(IOException e){
@@ -363,7 +371,7 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
     		            int len = -1;
     		            try
     		            {
-    		                while ( ( len = this.in.read(b)) > -1 )
+    		                if ( ( len = this.in.read(b)) > -1 )
     		                {
     		                	//TODO the line for reading the port is here~
     		                	RTGrapher.this.addData(ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN).getFloat(),j);
@@ -398,6 +406,7 @@ public class RTGrapher extends ApplicationFrame implements SerialPortEventListen
                 for (String portName : PORT_NAMES) {
                         if (currPortId.getName().equals(portName)) {
                                 portId = currPortId;
+                                System.out.println("Connected to"+portId);
                                 break;
                         }
                 }

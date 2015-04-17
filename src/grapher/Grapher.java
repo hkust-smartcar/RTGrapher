@@ -35,9 +35,9 @@ public class Grapher {
     private static final Random 		random 		= 	new Random();
     private Timer 						timer;
     final DynamicTimeSeriesCollection 	dataset;
-    public static JFreeChart 			chart;
+    public  JFreeChart 					chart;
     private static 	ChartPanel			chartPanel;
-    private static boolean				autoAdjustRange		=	false;
+    private static boolean				autoAdjustRange		=	true;
     private int							delay;
    
     ChartPanel							getChartPanel()
@@ -45,38 +45,34 @@ public class Grapher {
     	return chartPanel;
     }
     
-    private JFreeChart 		createChart(final XYDataset dataset) {
+    private JFreeChart		createChart(final XYDataset dataset) {
         final JFreeChart result = ChartFactory.createTimeSeriesChart(
-            TITLE, "", "Value", dataset, true, true, false);
+            TITLE, "", "", dataset, true, true, false);
         result.setBackgroundPaint(Color.white);
         result.setAntiAlias(true);
         final XYPlot plot = result.getXYPlot();
         ValueAxis domain = plot.getDomainAxis();
         domain.setAutoRange(true);
         ValueAxis range = plot.getRangeAxis();
-        if(autoAdjustRange)
-        {
-	        range.setRange(-MINMAX, MINMAX);
-        }else
-        {
-        	range.setAutoRange(true);
-        }
+//        range.setRange(-MINMAX,MINMAX);
+        range.setAutoRange(true);
         return result;
     }
     
     public 		Grapher()
     {
     	 dataset=new DynamicTimeSeriesCollection(MAX_CHANNEL, COUNT, new Second());
-    	 for(int i=1;i<MAX_CHANNEL;i++)
+    	 //TODO the for loop below can cooperate with the checkboxes and add series on demand
+    	 for(int i=0;i<MAX_CHANNEL;i++)
     	 {
     		 String name="Series ";
-    		 name+=i;
+    		 name+=(i+1);
     		 float[] f={0};
     		 dataset.addSeries(f,i,(Comparable<String>)(name));
+//    		 dataset.addValue(i, dataset.getNewestIndex(), f[0]);
     	 }
     	 dataset.setTimeBase(new Second(0, 0, 0, 1, 1, 2011));
-    	 chart=createChart(dataset);
-    	 chartPanel=new ChartPanel(chart);
+    	 chartPanel=new ChartPanel(createChart(dataset));
     	 //TODO see if the line below is correct or not
     	 chartPanel.setPreferredSize(new Dimension(291,187));
     	 timer=new Timer(delay,new ActionListener() {
@@ -102,6 +98,7 @@ public class Grapher {
     public  void	addData(int index,float value)
     {
     	if(index>MAX_CHANNEL)return;
+  
     	dataset.addValue(index, dataset.getNewestIndex(), value);
     }
     public	int		getMaxChannel()

@@ -11,9 +11,7 @@ import java.util.Queue;
 import java.util.TooManyListenersException;
 
 public class BluetoothSocket implements SerialPortEventListener{
-//	 //passed from main GUI
-//    GUI window = null;
-    //for containing the ports that will be found
+
     private Enumeration 	   ports = null;
     //map the port names to CommPortIdentifiers
     private HashMap 		   portMap = new HashMap();
@@ -26,9 +24,7 @@ public class BluetoothSocket implements SerialPortEventListener{
     private InputStream 	   input = null;
     private OutputStream 	   output = null;
 
-    //just a boolean flag that i use for enabling
-    //and disabling buttons depending on whether the program
-    //is connected to a serial port or not
+
     private boolean 		  bConnected 		= false;
     /*
      * statusFlag explanation:
@@ -53,13 +49,14 @@ public class BluetoothSocket implements SerialPortEventListener{
      */
     private int				  readFlag;
     private volatile Queue<TaggedData> queue;
-    private boolean			  hasDataAvailable;
+    private volatile boolean  hasDataAvailable;
 
     static int 		  		  TIMEOUT 			= 1000;
 
     
     private Protocol		  protocol;
     private	String			  retrievedData;
+    public CarControlPanel	  masterPanel;
 
 	  //search for all the serial ports
     //pre style="font-size: 11px;": none
@@ -176,12 +173,13 @@ public class BluetoothSocket implements SerialPortEventListener{
     
     @Override
     public void serialEvent(SerialPortEvent evt) {
+    	System.out.println("serialEvent!");
         if (evt.getEventType() == SerialPortEvent.DATA_AVAILABLE)
         {
             try
             {
                 byte singleData = (byte)input.read();
-
+                System.out.println(new String(new byte[]{singleData}));
                 if (singleData != protocol.NEW_LINE_ASCII)
                 {
                     retrievedData = new String(new byte[] {singleData});
@@ -201,6 +199,11 @@ public class BluetoothSocket implements SerialPortEventListener{
 							int instrI=Integer.parseInt(instruction);
 							float val	=Float.parseFloat(value);
 							queue.add(new TaggedData(val,instrI));
+							//TODO see if pushing to panel's static queue works
+							System.out.println("Data added");
+							CarControlPanel.dataQueue.add(new TaggedData(val,instrI));
+							masterPanel.addData(new TaggedData(val,instrI));
+							
 						} catch (NumberFormatException e) {
 							readFlag=5;
 							return;
@@ -208,6 +211,7 @@ public class BluetoothSocket implements SerialPortEventListener{
                     }
                     
                     hasDataAvailable=true;
+
                 }else
                 {
                 	hasDataAvailable=false;
@@ -254,6 +258,7 @@ public class BluetoothSocket implements SerialPortEventListener{
     {
     	return statusFlag;
     }
+    
     public class TaggedData
     {
     	public float data;
@@ -273,6 +278,7 @@ public class BluetoothSocket implements SerialPortEventListener{
     {
     	return readFlag;
     }
+    
     public synchronized TaggedData extractData()
     {
     	if(queue.isEmpty())
@@ -290,4 +296,5 @@ public class BluetoothSocket implements SerialPortEventListener{
     {
     	return hasDataAvailable;
     };
+
 }

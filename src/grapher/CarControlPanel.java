@@ -1,7 +1,9 @@
 package grapher;
 
 import gnu.io.CommPortIdentifier;
+import grapher.BluetoothSocket.TaggedData;
 
+import java.awt.Dimension;
 import java.awt.EventQueue;
 
 import javax.swing.JFrame;
@@ -21,22 +23,12 @@ import javax.swing.JToggleButton;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.JCheckBox;
-
-import java.awt.Component;
-
-import javax.swing.Box;
-import javax.swing.JSeparator;
 import javax.swing.JList;
-import javax.swing.border.TitledBorder;
-import javax.swing.JFormattedTextField;
 
-import java.awt.Color;
-
-import javax.swing.AbstractListModel;
-
-import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Queue;
 import java.util.Random;
+import java.util.StringTokenizer;
 
 import javax.swing.JScrollPane;
 import javax.swing.event.ChangeListener;
@@ -50,6 +42,8 @@ import javax.swing.JTextArea;
 
 import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry.Entry;
 
+import java.awt.Color;
+
 
 
 public class CarControlPanel {
@@ -62,6 +56,11 @@ public class CarControlPanel {
 	private RandomSignalGenerator signalGenerator;
 	private Thread			  	  listener;
 	private boolean				  stopListening;
+	private boolean				  useFileModule		=true;
+	private String 				  PATH				="/dev/tty.SCTRAVIS-DevB";
+	private FileMonitor 		  fileMonitor;
+	private Thread				  fileMonitorThread;
+	public static volatile Queue<TaggedData> dataQueue;
 	
 	private JFrame 			frmSmartCarControl;
 	private JTextField 		loopIntervalField;
@@ -90,6 +89,8 @@ public class CarControlPanel {
 	private JButton 		btnReset;
 	private JButton 		btnApplied;
 	private JLabel 			noticeLabel;
+	private JPanel			trackPanel;
+	private LineComponent	lineComponent;
 //	private JScrollPane		deviceListScrollPane;
 	private JLabel 			lblDeviceConnectState;
 	private JScrollPane 	deviceScrollPane;
@@ -99,6 +100,10 @@ public class CarControlPanel {
 	private JCheckBox chckbxEncoderCount;
 	private JCheckBox chckbxMagneticSensorReading;
 	private JCheckBox chckbxCarSpeed;
+	private JTextField xCoor;
+	private JTextField yCoor;
+	private JLabel lblReference;
+	private JButton btnRefSet;
 	/**
 	 * Launch the application.
 	 */
@@ -108,6 +113,7 @@ public class CarControlPanel {
 				try {
 					CarControlPanel window = new CarControlPanel();
 					window.frmSmartCarControl.setVisible(true);
+					window.waitString();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -118,13 +124,34 @@ public class CarControlPanel {
 	/**
 	 * Create the application.
 	 */
+	public void waitString()
+	{
+//		try{
+//			fileMonitor.wait();
+//		}catch(InterruptedException e)
+//		{
+//			noticeLabel.setText(fileMonitor.data);
+//		}
+	}
+	public void writeMessage(int cmd, float value)
+	{
+		if(fileMonitor!=null)
+		{
+			fileMonitor.income="$"+cmd+" "+value;
+		}
+	}
 	public CarControlPanel() {
 		initialize();
 		btSocket=new BluetoothSocket();
+		btSocket.masterPanel=this;
 		custom	=new CarConfig();
 		grapher	=new Grapher();
+		lineComponent=new LineComponent();
 		grapher.setDelay(Integer.parseInt(loopIntervalField.getText()));
 		graphPanel.add(grapher.getChartPanel());
+		//TODO the file monitor is initialized here
+		fileMonitor=new FileMonitor(PATH,this);
+//		fileMonitorThread=new Thread(fileMonitor);
 		
 		chckbxEncoderCount = new JCheckBox("Encoder Count");
 		chckbxEncoderCount.setBounds(333, 255, 128, 23);
@@ -139,8 +166,72 @@ public class CarControlPanel {
 		frmSmartCarControl.getContentPane().add(chckbxCarSpeed);
 		
 		noticeLabel = new JLabel("");
-		noticeLabel.setBounds(13, 376, 166, 16);
+		noticeLabel.setBounds(172, 324, 166, 16);
 		frmSmartCarControl.getContentPane().add(noticeLabel);
+		
+		xCoor = new JTextField();
+		xCoor.setBounds(191, 364, 42, 28);
+		frmSmartCarControl.getContentPane().add(xCoor);
+		xCoor.setColumns(10);
+		
+		yCoor = new JTextField();
+		yCoor.setBounds(278, 364, 51, 28);
+		frmSmartCarControl.getContentPane().add(yCoor);
+		yCoor.setColumns(10);
+		
+		JLabel lblX = new JLabel("x:");
+		lblX.setBounds(172, 370, 23, 16);
+		frmSmartCarControl.getContentPane().add(lblX);
+		
+		JLabel lblY = new JLabel("y:");
+		lblY.setBounds(255, 370, 23, 16);
+		frmSmartCarControl.getContentPane().add(lblY);
+		
+		JButton btnTrace = new JButton("Trace");
+		btnTrace.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try
+				{
+					lineComponent.addLine(Integer.parseInt(xCoor.getText()),Integer.parseInt(yCoor.getText()));
+				}catch(Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+		btnTrace.setBounds(13, 363, 117, 29);
+		frmSmartCarControl.getContentPane().add(btnTrace);
+		
+		trackPanel = new JPanel();
+		trackPanel.setBackground(Color.WHITE);
+		trackPanel.add(lineComponent);
+		lineComponent.setBounds(16, 404, 598, 187);
+		lineComponent.setPreferredSize(new Dimension(598,187));
+		trackPanel.setBounds(16, 404, 598, 187);
+		trackPanel.setPreferredSize(new Dimension(598,187));
+		frmSmartCarControl.getContentPane().add(trackPanel);
+		
+		lblReference = new JLabel("Reference:");
+		lblReference.setBounds(172, 339, 82, 16);
+		frmSmartCarControl.getContentPane().add(lblReference);
+		
+		btnRefSet = new JButton("Set");
+		btnRefSet.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try
+				{
+					int x=Integer.parseInt(xCoor.getText());
+					int y=Integer.parseInt(yCoor.getText());
+					lineComponent.setReferenceCoordinate(x, y);
+				}catch(NumberFormatException e1)
+				{
+					e1.printStackTrace();
+					return;
+				}
+			}
+		});
+		btnRefSet.setBounds(278, 334, 51, 29);
+		frmSmartCarControl.getContentPane().add(btnRefSet);
 		grapher.start();
 		
 		signalGenerator = new RandomSignalGenerator(300);
@@ -193,7 +284,7 @@ public class CarControlPanel {
 		frmSmartCarControl = new JFrame();
 		frmSmartCarControl.setTitle("Smart Car Control Panel");
 		frmSmartCarControl.setResizable(false);
-		frmSmartCarControl.setBounds(100, 100, 620, 420);
+		frmSmartCarControl.setBounds(100, 100, 620, 630);
 		frmSmartCarControl.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frmSmartCarControl.getContentPane().setLayout(null);
 		
@@ -251,7 +342,7 @@ public class CarControlPanel {
 						Integer.parseInt(loopIntervalField.getText());
 			}
 		});
-		loopIntervalField.setText("20");
+		loopIntervalField.setText("50");
 		loopIntervalField.setBounds(172, 6, 51, 28);
 		frmSmartCarControl.getContentPane().add(loopIntervalField);
 		loopIntervalField.setColumns(10);
@@ -405,16 +496,33 @@ public class CarControlPanel {
 				if(!btSocket.isConnected())
 				{
 					String selectedDeviceName=(String)deviceList.getSelectedValue();
-					btSocket.connectToPort(selectedDeviceName);
-					handleSocketState();
+					//TODO this is the place where I decide which module to use
+					if(useFileModule)
+					{
+//						fileMonitor=new FileMonitor(PATH,this);
+						if(!fileMonitor.isAlive())
+						fileMonitor.start();
+					}else
+					{
+						btSocket.connectToPort(selectedDeviceName);
+						handleSocketState();
+					}
 					stopListening=false;
 					refreshListener();
 				}
 				//TODO The disconnect function is not available. The program crashes whenever one tries to disconnect from the port.
 				//	   This may because of the bug inside rxtx library.
+				//	   
 				else	
 				{
 //					btSocket.disconnect();
+					if(useFileModule)
+					{
+						if(fileMonitorThread.isAlive())
+						{
+							fileMonitorThread=null;
+						}
+					}
 					handleSocketState();
 					stopListening=true;
 					btnConnect.setText("Connect");
@@ -445,8 +553,6 @@ public class CarControlPanel {
 		});
 		btnRefresh.setBounds(229, 164, 82, 29);
 		frmSmartCarControl.getContentPane().add(btnRefresh);
-		
-
 		
 	}
 	
@@ -529,24 +635,72 @@ public class CarControlPanel {
 	}
 	public void refreshListener()
 	{
-		stopListening=false;
-		listener=new Thread(new Runnable(){
-			public void run()
-			{
-				while(!stopListening)
+//		stopListening=false;
+//		listener=new Thread(new Runnable(){
+//			public void run()
+//			{
+//				while(!stopListening)
+//				{
+//					if(btSocket.dataAvailable())
+//					{
+//						BluetoothSocket.TaggedData data
+//						=btSocket.extractData();
+//						if(data!=null)
+//						{
+//							System.out.println(data.tag+" "+data.data);
+//							grapher.addData(data.tag, data.data);
+//						}
+//					}
+//				}
+//			}
+//		});
+//		listener.start();
+	}
+	public void addData(TaggedData data)
+	{
+		grapher.addData(data.tag,data.data);
+	}
+	public void addData(String data)
+	{
+		StringTokenizer st=new StringTokenizer(data);
+		int i=0;
+		/*
+		 * Coordinate case: when incoming data is something like (x,y)
+		 */
+		if(data.substring(0, 1)=="(")
+		{
+			data=data.substring(0, data.length()-1);
+			st=new StringTokenizer(data);
+			if(st.countTokens()!=2)return;
+			else {
 				{
-					if(btSocket.dataAvailable())
+					try{
+						int x=Integer.parseInt(st.nextToken(","));
+						int y=Integer.parseInt(st.nextToken(","));
+						lineComponent.addLine(x,y);
+					}catch(NumberFormatException e)
 					{
-						BluetoothSocket.TaggedData data
-						=btSocket.extractData();
-						if(data!=null)
-						{
-							grapher.addData(data.tag, data.data);
-						}
+						e.printStackTrace();
+						return;
 					}
 				}
 			}
-		});
-		listener.start();
+		}
+		
+		while(st.hasMoreTokens())
+		{
+			String token=st.nextToken(" ");
+			float data1;
+			try {
+				data1=Float.parseFloat(token);
+			} catch (NumberFormatException e) {
+				// TODO: handle exception
+				e.printStackTrace();
+				i++;
+				continue;
+			}
+			grapher.addData(i, data1);
+			i++;
+		}
 	}
 }

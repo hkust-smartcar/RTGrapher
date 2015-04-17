@@ -36,4 +36,8 @@ public class FunctionMapConfig {
 			 }
 		 }
 	 }
+	 public int getMappedValue(int hash)
+	 {
+		 return functionMap.get(hash);
+	 }
 }
