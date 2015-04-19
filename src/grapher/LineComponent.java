@@ -31,10 +31,12 @@ import java.awt.Point;
 		        this.color = color;
 		    }               
 		}
-
+		public int mouseX,mouseY;
 		private final LinkedList<Line> lines = new LinkedList<Line>();
 		private final LinkedList<Point> points=new LinkedList<Point>();
-		private int lastX=0,lastY=0,refX=200,refY=100;
+		private int lastX=0,lastY=0;
+		public int refX=200,refY=100;
+		public final int drefX=200,drefY=100;
 		public void addLine(int x1, int x2, int x3, int x4) {
 		    addLine(x1, x2, x3, x4, Color.black);
 
@@ -71,7 +73,7 @@ import java.awt.Point;
 		protected void paintComponent(Graphics g) {
 		    super.paintComponent(g);
 		    g.setColor(Color.red);
-		    g.drawRect(refX, refY, 10, 10);
+		    g.drawRect(refX-5, refY-5, 10, 10);
 	        Dimension d = getPreferredSize();
 		    for (Line line : lines) {
 		        g.setColor(line.color);

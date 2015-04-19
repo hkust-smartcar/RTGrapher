@@ -8,10 +8,10 @@ import java.io.OutputStream;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Queue;
+import java.util.StringTokenizer;
 import java.util.TooManyListenersException;
 
 public class BluetoothSocket implements SerialPortEventListener{
-
     private Enumeration 	   ports = null;
     //map the port names to CommPortIdentifiers
     private HashMap 		   portMap = new HashMap();
@@ -54,7 +54,7 @@ public class BluetoothSocket implements SerialPortEventListener{
     static int 		  		  TIMEOUT 			= 1000;
 
     
-    private Protocol		  protocol;
+    private Protocol		  protocol=new Protocol();
     private	String			  retrievedData;
     public CarControlPanel	  masterPanel;
 
@@ -101,6 +101,7 @@ public class BluetoothSocket implements SerialPortEventListener{
                //the CommPort object can be casted to a SerialPort object
                serialPort = (SerialPort)commPort;
 
+
            }
            catch (PortInUseException e)
            {
@@ -112,7 +113,11 @@ public class BluetoothSocket implements SerialPortEventListener{
         	   statusFlag=1;
         	   return;
            }
-    	   
+           if(!initIOStream())
+           {
+        	  statusFlag=4; 
+           }
+           initListener();
     	   bConnected=true;
     	   statusFlag=3;
     }
@@ -126,7 +131,7 @@ public class BluetoothSocket implements SerialPortEventListener{
             //
             input = serialPort.getInputStream();
             output = serialPort.getOutputStream();
-            writeData(0, "0");
+//            writeData(0, "0");
 
             successful = true;
             return successful;
@@ -154,13 +159,14 @@ public class BluetoothSocket implements SerialPortEventListener{
     public synchronized void disconnect()
     {
         //close the serial port
+    	//TODO try to fix this
         try
         {
-            writeData(0, "0");
-            serialPort.removeEventListener();
+//            writeData(0, "0");
+//            serialPort.removeEventListener();
             input.close();
             output.close();
-            serialPort.close();
+//            serialPort.close();
 
             bConnected=false;
         }
@@ -173,49 +179,58 @@ public class BluetoothSocket implements SerialPortEventListener{
     
     @Override
     public void serialEvent(SerialPortEvent evt) {
-    	System.out.println("serialEvent!");
         if (evt.getEventType() == SerialPortEvent.DATA_AVAILABLE)
         {
             try
             {
                 byte singleData = (byte)input.read();
-                System.out.println(new String(new byte[]{singleData}));
-                if (singleData != protocol.NEW_LINE_ASCII)
+//                System.out.print(new String(new byte[]{singleData}));
+                String temp=new String(new byte[]{singleData});
+                if(singleData==10)
                 {
-                    retrievedData = new String(new byte[] {singleData});
-                    //TODO see if the handling below works.
-                    if(retrievedData.charAt(0)!=protocol.SIGNAL
-                    		||retrievedData.charAt(protocol.DELIM)==-1)
-                    {
-                    	readFlag=4;
-                    	return;
-                    }else
-                    {
-                    	String instruction=retrievedData.substring(1,
-                    								protocol.DELIM);
-                    	String value=retrievedData.substring(protocol.DELIM+1);
-                    	
-                    	try {
-							int instrI=Integer.parseInt(instruction);
-							float val	=Float.parseFloat(value);
-							queue.add(new TaggedData(val,instrI));
-							//TODO see if pushing to panel's static queue works
-							System.out.println("Data added");
-							CarControlPanel.dataQueue.add(new TaggedData(val,instrI));
-							masterPanel.addData(new TaggedData(val,instrI));
-							
-						} catch (NumberFormatException e) {
-							readFlag=5;
-							return;
-						}
-                    }
-                    
-                    hasDataAvailable=true;
-
+                	masterPanel.addData(retrievedData);
+                	retrievedData="";
                 }else
                 {
-                	hasDataAvailable=false;
+                	retrievedData+=temp;
                 }
+//                if (singleData != protocol.NEW_LINE_ASCII)
+//                {
+//                	
+//                    retrievedData = new String(new byte[] {singleData});
+//                    //TODO see if the handling below works.
+//                    if(retrievedData.charAt(0)!=protocol.SIGNAL
+//                    		||retrievedData.charAt(protocol.DELIM)==-1)
+//                    {
+//                    	readFlag=4;
+//                    	return;
+//                    }else
+//                    {
+//                    	String instruction=retrievedData.substring(1,
+//                    								protocol.DELIM);
+//                    	String value=retrievedData.substring(protocol.DELIM+1);
+//                    	
+//                    	try {
+//							int instrI=Integer.parseInt(instruction);
+//							float val	=Float.parseFloat(value);
+//							queue.add(new TaggedData(val,instrI));
+//							//TODO see if pushing to panel's static queue works
+//							System.out.println("Data added");
+//							CarControlPanel.dataQueue.add(new TaggedData(val,instrI));
+//							masterPanel.addData(new TaggedData(val,instrI));
+//							
+//						} catch (NumberFormatException e) {
+//							readFlag=5;
+//							return;
+//						}
+//                    }
+//                    
+//                    hasDataAvailable=true;
+//
+//                }else
+//                {
+//                	hasDataAvailable=false;
+//                }
             }
             catch (IllegalStateException e)
             {
@@ -235,18 +250,22 @@ public class BluetoothSocket implements SerialPortEventListener{
         }
     }
     
-    public void writeData(int commandCode, String value)
+    public void writeData(String commandCode, String value)
     {
-        try
+        if(protocol.commandMap.get(commandCode)==null)return;
+    	try
         {
-        	String message="s";
+        	String message="$";
         	
-        	message+=commandCode;
-        	message+=protocol.DELIM;
+        	message+=protocol.commandMap.get(commandCode);
+        	message+=(char)protocol.SPACE_ASCII;
         	message+=value;
+        	message+=(char)protocol.DELIM;
 //        	message+=(char)SPACE_ASCII;
-        	
+        	System.out.println("Sending: "+message);
+   
             output.write(message.getBytes());
+            output.flush();
         }
         catch (Exception e)
         {
@@ -265,7 +284,8 @@ public class BluetoothSocket implements SerialPortEventListener{
     	public int tag;
     	TaggedData(TaggedData data)
     	{
-    		
+    		this.data=data.data;
+    		this.tag=data.tag;
     	}
     	TaggedData(float d,int t)
     	{

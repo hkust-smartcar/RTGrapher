@@ -43,6 +43,9 @@ import javax.swing.JTextArea;
 import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry.Entry;
 
 import java.awt.Color;
+import java.awt.event.MouseMotionAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseAdapter;
 
 
 
@@ -56,7 +59,7 @@ public class CarControlPanel {
 	private RandomSignalGenerator signalGenerator;
 	private Thread			  	  listener;
 	private boolean				  stopListening;
-	private boolean				  useFileModule		=true;
+	private boolean				  useFileModule		=false;
 	private String 				  PATH				="/dev/tty.SCTRAVIS-DevB";
 	private FileMonitor 		  fileMonitor;
 	private Thread				  fileMonitorThread;
@@ -104,6 +107,15 @@ public class CarControlPanel {
 	private JTextField yCoor;
 	private JLabel lblReference;
 	private JButton btnRefSet;
+	private JLabel lblMotor;
+	private JLabel lblServo_1;
+	private JLabel lblKp_1;
+	private JLabel lblKi_1;
+	private JLabel lblKd_1;
+	private JTextField textField;
+	private JTextField textField_1;
+	private JTextField textField_2;
+	private JButton btnIntervalSet;
 	/**
 	 * Launch the application.
 	 */
@@ -147,6 +159,23 @@ public class CarControlPanel {
 		custom	=new CarConfig();
 		grapher	=new Grapher();
 		lineComponent=new LineComponent();
+		lineComponent.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent e) {
+				lineComponent.mouseX=e.getX();
+				lineComponent.mouseY=e.getY();
+			}
+		});
+		lineComponent.addMouseMotionListener(new MouseMotionAdapter() {
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				lineComponent.refX+=(e.getX()-lineComponent.mouseX);
+				lineComponent.refY+=(e.getY()-lineComponent.mouseY);
+				lineComponent.mouseX=e.getX();
+				lineComponent.mouseY=e.getY();
+				lineComponent.repaint();
+			}
+		});
 		grapher.setDelay(Integer.parseInt(loopIntervalField.getText()));
 		graphPanel.add(grapher.getChartPanel());
 		//TODO the file monitor is initialized here
@@ -192,6 +221,7 @@ public class CarControlPanel {
 			public void actionPerformed(ActionEvent e) {
 				try
 				{
+					btSocket.writeData("LCD_TOGGLE_PAGE", "0");
 					lineComponent.addLine(Integer.parseInt(xCoor.getText()),Integer.parseInt(yCoor.getText()));
 				}catch(Exception e1)
 				{
@@ -199,7 +229,7 @@ public class CarControlPanel {
 				}
 			}
 		});
-		btnTrace.setBounds(13, 363, 117, 29);
+		btnTrace.setBounds(16, 365, 75, 29);
 		frmSmartCarControl.getContentPane().add(btnTrace);
 		
 		trackPanel = new JPanel();
@@ -212,7 +242,7 @@ public class CarControlPanel {
 		frmSmartCarControl.getContentPane().add(trackPanel);
 		
 		lblReference = new JLabel("Reference:");
-		lblReference.setBounds(172, 339, 82, 16);
+		lblReference.setBounds(186, 336, 82, 16);
 		frmSmartCarControl.getContentPane().add(lblReference);
 		
 		btnRefSet = new JButton("Set");
@@ -232,6 +262,69 @@ public class CarControlPanel {
 		});
 		btnRefSet.setBounds(278, 334, 51, 29);
 		frmSmartCarControl.getContentPane().add(btnRefSet);
+		
+		lblMotor = new JLabel("Motor:");
+		lblMotor.setBounds(16, 240, 61, 16);
+		frmSmartCarControl.getContentPane().add(lblMotor);
+		
+		lblServo_1 = new JLabel("Servo:");
+		lblServo_1.setBounds(101, 240, 61, 16);
+		frmSmartCarControl.getContentPane().add(lblServo_1);
+		
+		lblKp_1 = new JLabel("Kp:");
+		lblKp_1.setBounds(107, 262, 23, 16);
+		frmSmartCarControl.getContentPane().add(lblKp_1);
+		
+		lblKi_1 = new JLabel("Ki:");
+		lblKi_1.setBounds(107, 299, 23, 16);
+		frmSmartCarControl.getContentPane().add(lblKi_1);
+		
+		lblKd_1 = new JLabel("Kd:");
+		lblKd_1.setBounds(108, 336, 29, 16);
+		frmSmartCarControl.getContentPane().add(lblKd_1);
+		
+		textField = new JTextField();
+		textField.setText("0");
+		textField.setBounds(142, 253, 32, 28);
+		frmSmartCarControl.getContentPane().add(textField);
+		textField.setColumns(10);
+		
+		textField_1 = new JTextField();
+		textField_1.setText("0");
+		textField_1.setBounds(142, 293, 32, 28);
+		frmSmartCarControl.getContentPane().add(textField_1);
+		textField_1.setColumns(10);
+		
+		textField_2 = new JTextField();
+		textField_2.setText("0");
+		textField_2.setBounds(142, 330, 32, 28);
+		frmSmartCarControl.getContentPane().add(textField_2);
+		textField_2.setColumns(10);
+		
+		btnIntervalSet = new JButton("Set");
+		btnIntervalSet.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try{
+					grapher.setDelay(Integer.parseInt(loopIntervalField.getText()));
+				}catch(NumberFormatException e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+		btnIntervalSet.setBounds(229, 6, 51, 29);
+		frmSmartCarControl.getContentPane().add(btnIntervalSet);
+		
+		JButton btnResetView = new JButton("Center");
+		btnResetView.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				lineComponent.refX=lineComponent.drefX;
+				lineComponent.refY=lineComponent.drefY;
+				lineComponent.repaint();
+			}
+		});
+		btnResetView.setBounds(85, 365, 75, 29);
+		frmSmartCarControl.getContentPane().add(btnResetView);
 		grapher.start();
 		
 		signalGenerator = new RandomSignalGenerator(300);
@@ -374,7 +467,7 @@ public class CarControlPanel {
 			}
 		});
 		motorKpField.setText("0");
-		motorKpField.setBounds(113, 253, 51, 28);
+		motorKpField.setBounds(57, 253, 32, 28);
 		frmSmartCarControl.getContentPane().add(motorKpField);
 		motorKpField.setColumns(10);
 		
@@ -389,7 +482,7 @@ public class CarControlPanel {
 		motorKiField = new JTextField();
 		motorKiField.setText("0");
 		motorKiField.setColumns(10);
-		motorKiField.setBounds(113, 293, 51, 28);
+		motorKiField.setBounds(57, 293, 32, 28);
 		motorKiField.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				custom.c_motorPIDControlVariable[1]=
@@ -405,7 +498,7 @@ public class CarControlPanel {
 		motorKdField = new JTextField();
 		motorKdField.setText("0");
 		motorKdField.setColumns(10);
-		motorKdField.setBounds(113, 333, 51, 28);
+		motorKdField.setBounds(57, 330, 32, 28);
 		motorKdField.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				custom.c_motorPIDControlVariable[2]=
@@ -515,7 +608,7 @@ public class CarControlPanel {
 				//	   
 				else	
 				{
-//					btSocket.disconnect();
+					btSocket.disconnect();
 					if(useFileModule)
 					{
 						if(fileMonitorThread.isAlive())
@@ -678,6 +771,7 @@ public class CarControlPanel {
 						int x=Integer.parseInt(st.nextToken(","));
 						int y=Integer.parseInt(st.nextToken(","));
 						lineComponent.addLine(x,y);
+						return;
 					}catch(NumberFormatException e)
 					{
 						e.printStackTrace();
