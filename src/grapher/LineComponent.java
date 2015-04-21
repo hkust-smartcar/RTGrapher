@@ -15,8 +15,9 @@ import javax.swing.JPanel;
 import javax.swing.JComponent;
 import java.awt.Point;
 	public class LineComponent extends JComponent{
-
-		private static class Line{
+		public boolean		mouseEntered=false;
+		public boolean		isGroupSelecting=false;
+		public static class Line{
 		    final int x1; 
 		    final int y1;
 		    final int x2;
@@ -31,12 +32,23 @@ import java.awt.Point;
 		        this.color = color;
 		    }               
 		}
-		public int mouseX,mouseY;
-		private final LinkedList<Line> lines = new LinkedList<Line>();
+		public static class PositionTag{
+			public String tag;
+			int xPos,yPos;
+			public PositionTag(String nameTag,int x,int y)
+			{
+				this.tag=nameTag;
+				this.xPos=x;
+				this.yPos=y;
+			}
+		}
+		public int mouseX,mouseY,anX,anY;
+		public  final LinkedList<Line> lines = new LinkedList<Line>();
 		private final LinkedList<Point> points=new LinkedList<Point>();
+		public		  LinkedList<Line> selectedLine=new LinkedList<Line>();
 		private int lastX=0,lastY=0;
 		public int refX=200,refY=100;
-		public final int drefX=200,drefY=100;
+		public final int drefX=250,drefY=80;
 		public void addLine(int x1, int x2, int x3, int x4) {
 		    addLine(x1, x2, x3, x4, Color.black);
 
@@ -79,6 +91,36 @@ import java.awt.Point;
 		        g.setColor(line.color);
 		        g.drawLine(line.x1+refX, line.y1+refY, line.x2+refX, line.y2+refY);
 		    }
+		    for(Line line : selectedLine)
+		    {
+		    	//TODO may be useful later
+		    	g.setColor(Color.RED);
+		    	g.drawLine(line.x1+refX, line.y1+refY, line.x2+refX, line.y2+refY);
+		    	
+		    }
+		    if(mouseEntered)
+		    {
+		    	g.setColor(Color.BLACK);
+			    g.drawString("("+mouseX+","+mouseY+")", mouseX+20, mouseY+10);
+		    }
+		    if(isGroupSelecting)
+		    {
+		    	g.setColor(Color.BLUE);
+		    	if(anY>mouseY&&anX<mouseX)	//QI
+		    	{
+		    		g.drawRect(anX,mouseY,mouseX-anX,anY-mouseY);
+		    	}else if(anY>mouseY&&anX>mouseX) //QII
+		    	{
+		    		g.drawRect(mouseX,mouseY,anX-mouseX,anY-mouseY);
+		    	}else if(anY<mouseY&&anX>mouseX) //QIII
+		    	{
+		    		g.drawRect(mouseX,anY,anX-mouseX,mouseY-anY);
+		    	}else//QIV
+		    	{
+		    		g.drawRect(anX, anY, mouseX-anX, mouseY-anY);
+		    	}
+		    }
+		    
 //		    doDrawing(g);
 		}
 }

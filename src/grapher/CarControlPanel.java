@@ -2,7 +2,9 @@ package grapher;
 
 import gnu.io.CommPortIdentifier;
 import grapher.BluetoothSocket.TaggedData;
-
+import grapher.LineComponent.PositionTag;
+import grapher.LineComponent.Line;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 
@@ -164,13 +166,72 @@ public class CarControlPanel {
 			public void mousePressed(MouseEvent e) {
 				lineComponent.mouseX=e.getX();
 				lineComponent.mouseY=e.getY();
+				if(e.getButton()==MouseEvent.BUTTON3)
+				{
+					lineComponent.isGroupSelecting=true;
+					lineComponent.anX=e.getX();
+					lineComponent.anY=e.getY();
+				}
+			}
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				int mx=e.getX(),my=e.getY();
+				int refX=lineComponent.refX;
+				int refY=lineComponent.refY;
+				boolean hasLineSelected=false;
+				for(Line line : lineComponent.lines)
+				{
+					int x1=line.x1+refX,
+						y1=line.y1+refY,
+						x2=line.x2+refX,
+						y2=line.y2+refY;
+//					System.out.println(Math.abs(((mx-x1)*(y2-y1)-(my-y1)*(x2-x1)))); //for distance tracing
+					if(((x1<=mx&&mx<=x2)||(x2<=mx&&mx<=x1))
+							&&Math.abs(((mx-x1)*(y2-y1)-(my-y1)*(x2-x1)))<=100)
+					{
+						lineComponent.selectedLine.add(line);
+						lineComponent.repaint();
+						hasLineSelected=true;
+						break;
+					}
+				}
+				if(!hasLineSelected)
+				{
+					lineComponent.selectedLine.clear();
+					lineComponent.repaint();
+				}
+			}
+			@Override
+			public void mouseEntered(MouseEvent e) 
+			{
+				lineComponent.mouseEntered=true;
+				lineComponent.repaint();
+			}
+			@Override
+			public void mouseExited(MouseEvent e) 
+			{
+				lineComponent.mouseEntered=false;
+				lineComponent.repaint();
+			}
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				lineComponent.isGroupSelecting=false;
 			}
 		});
 		lineComponent.addMouseMotionListener(new MouseMotionAdapter() {
 			@Override
 			public void mouseDragged(MouseEvent e) {
-				lineComponent.refX+=(e.getX()-lineComponent.mouseX);
-				lineComponent.refY+=(e.getY()-lineComponent.mouseY);
+				if(e.getButton()==MouseEvent.BUTTON1)
+				{
+					lineComponent.refX+=(e.getX()-lineComponent.mouseX);
+					lineComponent.refY+=(e.getY()-lineComponent.mouseY);
+				}
+				lineComponent.mouseX=e.getX();
+				lineComponent.mouseY=e.getY();
+				lineComponent.repaint();
+			}
+			@Override
+			public void mouseMoved(MouseEvent e) {
 				lineComponent.mouseX=e.getX();
 				lineComponent.mouseY=e.getY();
 				lineComponent.repaint();
