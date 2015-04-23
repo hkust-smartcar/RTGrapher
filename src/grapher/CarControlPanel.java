@@ -114,9 +114,9 @@ public class CarControlPanel {
 	private JLabel lblKp_1;
 	private JLabel lblKi_1;
 	private JLabel lblKd_1;
-	private JTextField textField;
-	private JTextField textField_1;
-	private JTextField textField_2;
+	private JTextField servoKpField;
+	private JTextField servoKiField;
+	private JTextField servoKdField;
 	private JButton btnIntervalSet;
 	/**
 	 * Launch the application.
@@ -228,6 +228,29 @@ public class CarControlPanel {
 				}
 				lineComponent.mouseX=e.getX();
 				lineComponent.mouseY=e.getY();
+				if(e.getButton()==MouseEvent.BUTTON3)
+				{
+					for(Line line: lineComponent.lines)
+					{
+						int x1=line.x1;
+						int y1=line.y1;
+						int x2=line.x2;
+						int y2=line.y2;
+						int mx=lineComponent.mouseX;
+						int my=lineComponent.mouseY;
+						int anX=lineComponent.anX;
+						int anY=lineComponent.anY;
+						boolean hasLineSelected=false;
+						if((mx-x1)*(y2-y1)==(my-y1)*(x2-x1))
+						{
+							lineComponent.selectedLine.add(line);
+							lineComponent.repaint();
+							hasLineSelected=true;
+							break;
+						}
+					}
+
+				}
 				lineComponent.repaint();
 			}
 			@Override
@@ -247,7 +270,7 @@ public class CarControlPanel {
 		chckbxEncoderCount.setBounds(333, 255, 128, 23);
 		frmSmartCarControl.getContentPane().add(chckbxEncoderCount);
 		
-		chckbxMagneticSensorReading = new JCheckBox("Magnetic Sensor reading");
+		chckbxMagneticSensorReading = new JCheckBox("Magnetic Sensor");
 		chckbxMagneticSensorReading.setBounds(333, 280, 186, 23);
 		frmSmartCarControl.getContentPane().add(chckbxMagneticSensorReading);
 		
@@ -344,23 +367,39 @@ public class CarControlPanel {
 		lblKd_1.setBounds(108, 336, 29, 16);
 		frmSmartCarControl.getContentPane().add(lblKd_1);
 		
-		textField = new JTextField();
-		textField.setText("0");
-		textField.setBounds(142, 253, 32, 28);
-		frmSmartCarControl.getContentPane().add(textField);
-		textField.setColumns(10);
+		servoKpField = new JTextField();
+		servoKpField.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				btSocket.writeData("SERVO_PID_KP", servoKpField.getText());
+
+			}
+		});
+		servoKpField.setText("0");
+		servoKpField.setBounds(142, 253, 32, 28);
+		frmSmartCarControl.getContentPane().add(servoKpField);
+		servoKpField.setColumns(10);
 		
-		textField_1 = new JTextField();
-		textField_1.setText("0");
-		textField_1.setBounds(142, 293, 32, 28);
-		frmSmartCarControl.getContentPane().add(textField_1);
-		textField_1.setColumns(10);
+		servoKiField = new JTextField();
+		servoKiField.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				btSocket.writeData("SERVO_PID_KI", servoKiField.getText());
+			}
+		});
+		servoKiField.setText("0");
+		servoKiField.setBounds(142, 293, 32, 28);
+		frmSmartCarControl.getContentPane().add(servoKiField);
+		servoKiField.setColumns(10);
 		
-		textField_2 = new JTextField();
-		textField_2.setText("0");
-		textField_2.setBounds(142, 330, 32, 28);
-		frmSmartCarControl.getContentPane().add(textField_2);
-		textField_2.setColumns(10);
+		servoKdField = new JTextField();
+		servoKdField.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				btSocket.writeData("SERVO_PID_KD", servoKdField.getText());
+			}
+		});
+		servoKdField.setText("0");
+		servoKdField.setBounds(142, 330, 32, 28);
+		frmSmartCarControl.getContentPane().add(servoKdField);
+		servoKdField.setColumns(10);
 		
 		btnIntervalSet = new JButton("Set");
 		btnIntervalSet.addActionListener(new ActionListener() {
@@ -386,6 +425,36 @@ public class CarControlPanel {
 		});
 		btnResetView.setBounds(85, 365, 75, 29);
 		frmSmartCarControl.getContentPane().add(btnResetView);
+		
+		JButton servoPIDToggle = new JButton("Disable");
+		servoPIDToggle.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(servoPIDToggle.getText().equals("Disable"))
+				{
+					servoPIDToggle.setText("Enable");
+				}else
+				{
+					servoPIDToggle.setText("Disable");
+				}
+				btSocket.writeData("SERVO_PID_TOGGLE", "0");
+			}
+		});
+		servoPIDToggle.setBounds(89, 212, 75, 29);
+		frmSmartCarControl.getContentPane().add(servoPIDToggle);
+		
+		JCheckBox motorReverse = new JCheckBox("Reverse");
+		motorReverse.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				btSocket.writeData("MOTOR_REVERSE", "0");
+			}
+		});
+//		motorReverse.addChangeListener(new ChangeListener() {
+//			public void stateChanged(ChangeEvent e) {
+//				
+//			}
+//		});
+		motorReverse.setBounds(16, 184, 82, 23);
+		frmSmartCarControl.getContentPane().add(motorReverse);
 		grapher.start();
 		
 		signalGenerator = new RandomSignalGenerator(300);
@@ -447,6 +516,14 @@ public class CarControlPanel {
 		frmSmartCarControl.getContentPane().add(graphPanel);
 		
 		powerSlider = new JSlider();
+		powerSlider.setValue(500);
+		powerSlider.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				JSlider source=(JSlider)e.getSource();
+				if(btSocket!=null&&source!=null)
+				btSocket.writeData("MOTOR_POWER", Integer.toString(source.getValue()));
+			}
+		});
 		powerSlider.setPaintTicks(true);
 		powerSlider.setMajorTickSpacing(100);
 		powerSlider.setValue(500);
@@ -465,6 +542,16 @@ public class CarControlPanel {
 		frmSmartCarControl.getContentPane().add(lblServo);
 		
 		servoSlider = new JSlider();
+		servoSlider.setValue(900);
+		servoSlider.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				JSlider source=(JSlider)e.getSource();
+				if(btSocket!=null&&source!=null)
+				{
+					btSocket.writeData("SERVO_ANGLE", Integer.toString(source.getValue()));
+				}
+			}
+		});
 		servoSlider.setPaintTicks(true);
 		servoSlider.setMajorTickSpacing(180);
 		servoSlider.setOrientation(SwingConstants.VERTICAL);
@@ -480,9 +567,12 @@ public class CarControlPanel {
 				if(haltToggle.isSelected())
 				{
 					haltToggle.setText("Unhalt");
+					btSocket.writeData("HALT", "0");
+
 				}else
 				{
 					haltToggle.setText("halt");
+					btSocket.writeData("HALT", "0");
 				}
 			}
 		});
@@ -505,26 +595,40 @@ public class CarControlPanel {
 		lblLoopInterval.setBounds(86, 11, 93, 16);
 		frmSmartCarControl.getContentPane().add(lblLoopInterval);
 		
-		motorPIDToggle = new JToggleButton("Disable Motor PID");
-		motorPIDToggle.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
-				if(motorPIDToggle.isSelected())
+		motorPIDToggle = new JToggleButton("Disable");
+		motorPIDToggle.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(motorPIDToggle.getText().equals("Disable"))
 				{
-					motorPIDToggle.setText("Enable Motor PID");
+					motorPIDToggle.setText("Enable");
 				}else
 				{
-					motorPIDToggle.setText("Disable Motor PID");
+					motorPIDToggle.setText("Disable");
 				}
+				btSocket.writeData("MOTOR_PID_TOGGLE", "0");
 			}
 		});
-		motorPIDToggle.setBounds(18, 212, 156, 29);
+//		motorPIDToggle.addChangeListener(new ChangeListener() {
+//			public void stateChanged(ChangeEvent e) {
+//				if(motorPIDToggle.isSelected())
+//				{
+//					motorPIDToggle.setText("Enable Motor PID");
+//					btSocket.writeData("MOTOR_PID_TOGGLE", "0");
+//				}else
+//				{
+//					motorPIDToggle.setText("Disable Motor PID");
+//				}
+//			}
+//		});
+		motorPIDToggle.setBounds(6, 212, 71, 29);
 		frmSmartCarControl.getContentPane().add(motorPIDToggle);
 		
 		motorKpField = new JTextField();
 		motorKpField.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				custom.c_motorPIDControlVariable[0]=
-						Integer.parseInt(motorKpField.getText());
+//				custom.c_motorPIDControlVariable[0]=
+//						Integer.parseInt(motorKpField.getText());
+				btSocket.writeData("MOTOR_PID_KP",motorKpField.getText());
 			}
 		});
 		motorKpField.setText("0");
@@ -537,7 +641,7 @@ public class CarControlPanel {
 		frmSmartCarControl.getContentPane().add(lblKp);
 		
 		lblKi = new JLabel("Ki:");
-		lblKi.setBounds(28, 299, 61, 16);
+		lblKi.setBounds(28, 299, 23, 16);
 		frmSmartCarControl.getContentPane().add(lblKi);
 		
 		motorKiField = new JTextField();
@@ -546,8 +650,9 @@ public class CarControlPanel {
 		motorKiField.setBounds(57, 293, 32, 28);
 		motorKiField.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				custom.c_motorPIDControlVariable[1]=
-						Integer.parseInt(motorKiField.getText());
+//				custom.c_motorPIDControlVariable[1]=
+//						Integer.parseInt(motorKiField.getText());
+				btSocket.writeData("MOTOR_PID_KI", motorKiField.getText());
 			}
 		});
 		frmSmartCarControl.getContentPane().add(motorKiField);
@@ -562,8 +667,9 @@ public class CarControlPanel {
 		motorKdField.setBounds(57, 330, 32, 28);
 		motorKdField.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				custom.c_motorPIDControlVariable[2]=
-						Integer.parseInt(motorKdField.getText());
+//				custom.c_motorPIDControlVariable[2]=
+//						Integer.parseInt(motorKdField.getText());
+				btSocket.writeData("MOTOR_PID_KD", motorKdField.getText());
 			}
 		});
 		frmSmartCarControl.getContentPane().add(motorKdField);
@@ -586,27 +692,51 @@ public class CarControlPanel {
 		frmSmartCarControl.getContentPane().add(chckbxServoPower);
 		
 		kalmanFilterToggle = new JToggleButton("Disable Kalman Filter");
-		kalmanFilterToggle.setBounds(172, 212, 161, 29);
-		kalmanFilterToggle.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
-				if(motorPIDToggle.isSelected())
-				{
-					kalmanFilterToggle.setText("Disable Kalman Filter");
-				}else
+		kalmanFilterToggle.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(kalmanFilterToggle.getText().equals("Disable Kalman Filter"))
 				{
 					kalmanFilterToggle.setText("Enable Kalman Filter");
+				}else
+				{
+					kalmanFilterToggle.setText("Disable Kalman Filter");
 				}
+				btSocket.writeData("KALMAN_FILTER_TOGGLE","0");
 			}
 		});
+		kalmanFilterToggle.setBounds(172, 212, 161, 29);
+//		kalmanFilterToggle.addChangeListener(new ChangeListener() {
+//			public void stateChanged(ChangeEvent e) {
+//				if(motorPIDToggle.isSelected())
+//				{
+//					kalmanFilterToggle.setText("Disable Kalman Filter");
+//				}else
+//				{
+//					kalmanFilterToggle.setText("Enable Kalman Filter");
+//				}
+//				btSocket.writeData("KALMAN_FILTER_TOGGLE", "0");
+//			}
+//		});
 		frmSmartCarControl.getContentPane().add(kalmanFilterToggle);
 		
 		kalmanQField = new JTextField();
+		kalmanQField.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				btSocket.writeData("KALMAN_FILTER_Q", kalmanQField.getText());
+			}
+		});
 		kalmanQField.setText("0");
 		kalmanQField.setColumns(10);
 		kalmanQField.setBounds(249, 253, 51, 28);
 		frmSmartCarControl.getContentPane().add(kalmanQField);
 		
 		kalmanRField = new JTextField();
+		kalmanRField.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				btSocket.writeData("KALMAN_FILTER_R", kalmanRField.getText());
+
+			}
+		});
 		kalmanRField.setText("0");
 		kalmanRField.setColumns(10);
 		kalmanRField.setBounds(249, 293, 51, 28);
@@ -755,7 +885,7 @@ public class CarControlPanel {
 				lblDeviceConnectState.setText("Fail to create I/O");
 				break;
 			case 5:
-				lblDeviceConnectState.setText("Too many listener");
+				lblDeviceConnectState.setText("Too many listeners");
 				break;
 			case 6:
 				lblDeviceConnectState.setText("Fail to close port");

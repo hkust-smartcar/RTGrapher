@@ -26,6 +26,7 @@ public class Protocol {
 			commandMap.put("KALMAN_FILTER_TOGGLE", 15);
 			commandMap.put("TRACE"			, 16);
 			commandMap.put("HALT"			,-2);
+			commandMap.put("MOTOR_REVERSE"	,-3);
 			/*
 			 * end of mapping
 			 */
